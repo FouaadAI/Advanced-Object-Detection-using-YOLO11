@@ -5,3 +5,4 @@ ultralytics
 deep-sort-realtime
 pillow
 streamlit
+cv2
