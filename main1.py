@@ -136,16 +136,32 @@ elif source_radio == VIDEO:
 
 elif source_radio == LIVE:
     st.sidebar.write("Using webcam for live detection.")
-    if st.sidebar.button("Start Live Detection"):
-        video_cap = cv2.VideoCapture(0)
-        st_frame = st.empty()
-        while video_cap.isOpened():
-            success, frame = video_cap.read()
-            if success:
-                result = model.predict(frame, conf=confidence_value)
-                result_plotted = result[0].plot()
 
-                st_frame.image(result_plotted, caption="Live Detection", channels="BGR", use_container_width=True)
-            else:
-                video_cap.release()
-                break
+    if st.sidebar.button("Start Live Detection"):
+        video_cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # Improved compatibility for Windows
+        st_frame = st.empty()
+
+        if not video_cap.isOpened():
+            st.error("Unable to access webcam. Check permissions or restart Streamlit.")
+        else:
+            while True:
+                success, frame = video_cap.read()
+
+                if not success:
+                    st.error("Failed to retrieve frame. Restart webcam and try again.")
+                    break
+
+                # Resize frame for consistency
+                frame = cv2.resize(frame, (720, int(720 * (9 / 16))))
+
+                # Run YOLO detection
+                try:
+                    result = model.predict(frame, conf=confidence_value)
+                    result_plotted = result[0].plot()
+
+                    st_frame.image(result_plotted, caption="Live Detection", channels="BGR", use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error during model prediction: {e}")
+                    break
+
+            video_cap.release()
