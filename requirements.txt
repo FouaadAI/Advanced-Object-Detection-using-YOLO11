@@ -1,8 +1,7 @@
-opencv-python-headless
-numpy
-torch
-ultralytics
-deep-sort-realtime
-pillow
 streamlit
-cv2
+opencv-python
+ultralytics
+numpy
+Pillow
+json5
+deep_sort_realtime
