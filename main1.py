@@ -1,98 +1,101 @@
-# Import Required Libraries
 import cv2
 import streamlit as st
 from pathlib import Path
-import sys
+import tempfile
 from ultralytics import YOLO
 from PIL import Image
-import json
 from deep_sort_realtime.deepsort_tracker import DeepSort
 import numpy as np
 
-# Get the absolute path of the current file
-FILE = Path(__file__).resolve()
-ROOT = FILE.parent
+# Paths
+MODEL_PATH = Path('weights/yolo11n.pt')
 
-# Add the root path to sys.path
-if ROOT not in sys.path:
-    sys.path.append(str(ROOT))
+# Sidebar + Header
+st.set_page_config(page_title="YOLO11 Object Detection", page_icon="🤖")
+st.header("🧠 Advanced Object Detection using YOLOv11")
+st.sidebar.header("🛠️ Model Configurations")
 
-ROOT = ROOT.relative_to(Path.cwd())
+# Confidence
+confidence_value = float(st.sidebar.slider("Confidence Threshold (%)", 25, 100, 40)) / 100
 
-# Sources
-IMAGE = 'Image'
-VIDEO = 'Video'
-LIVE = 'Live Stream'
+# Source Select
+source_radio = st.sidebar.radio("Choose Input Source", ["Image", "Video", "Live Stream"])
 
-SOURCES_LIST = [IMAGE, VIDEO, LIVE]
-
-# Model Configurations
-MODEL_DIR = ROOT / 'weights'
-DETECTION_MODEL = MODEL_DIR / 'yolo11n.pt'
-
-# Page Layout
-st.set_page_config(
-    page_title="YOLO11 Object Detection",
-    page_icon="🤖"
-)
-
-# Header
-st.header("Advanced Object Detection using YOLO11")
-
-# Sidebar Configurations
-st.sidebar.header("Model Configurations")
-
-# Select Confidence Value
-confidence_value = float(st.sidebar.slider("Select Model Confidence Value", 25, 100, 40)) / 100
-
-# Load YOLO Model
+# Load Model
 try:
-    model = YOLO(DETECTION_MODEL)
+    model = YOLO(MODEL_PATH)
 except Exception as e:
-    st.error(f"Unable to load model. Check the specified path: {DETECTION_MODEL}")
+    st.error("🚨 Failed to load YOLO model.")
     st.error(e)
+    st.stop()
 
-# Image / Video Configuration
-st.sidebar.header("Image/Video Config")
-source_radio = st.sidebar.radio("Select Source", SOURCES_LIST)
-
-# Initialize Object Tracker
+# Tracker
 tracker = DeepSort(max_age=50)
 
-if source_radio == LIVE:
-    st.sidebar.write("Using webcam for live detection.")
+# === Image Upload ===
+if source_radio == "Image":
+    image_file = st.sidebar.file_uploader("Upload an Image", type=["jpg", "jpeg", "png"])
+    if image_file:
+        image = Image.open(image_file).convert("RGB")
+        st.image(image, caption="📷 Uploaded Image", use_column_width=True)
+        frame = np.array(image)
 
-    if st.sidebar.button("Start Live Detection"):
-        # Try different camera indexes (0 or 1)
-        cam_index = 0  
-        cap = cv2.VideoCapture(cam_index, cv2.CAP_DSHOW)  # Improved compatibility for Windows
+        try:
+            result = model.predict(frame, conf=confidence_value)[0]
+            plotted = result.plot()
+            st.image(plotted, caption="🔍 Detection Result", channels="BGR", use_column_width=True)
+        except Exception as e:
+            st.error(f"Detection failed: {e}")
 
+# === Video Upload ===
+elif source_radio == "Video":
+    video_file = st.sidebar.file_uploader("Upload a Video", type=["mp4", "avi", "mov", "mkv"])
+    if video_file:
+        tfile = tempfile.NamedTemporaryFile(delete=False)
+        tfile.write(video_file.read())
+
+        cap = cv2.VideoCapture(tfile.name)
+        st_frame = st.empty()
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            try:
+                results = model.predict(frame, conf=confidence_value)
+                plotted = results[0].plot()
+                st_frame.image(plotted, channels="BGR", use_column_width=True)
+            except Exception as e:
+                st.error(f"Detection failed: {e}")
+                break
+
+        cap.release()
+
+# === Live Stream (Webcam) ===
+elif source_radio == "Live Stream":
+    st.sidebar.write("⚠️ Live stream requires local run. Not supported on Streamlit Cloud.")
+    if st.sidebar.button("Start Webcam"):
+        cap = cv2.VideoCapture(0)
         if not cap.isOpened():
-            st.error("⚠️ Unable to access webcam. Retrying with index 1...")
-            cap = cv2.VideoCapture(1)
-
-        if not cap.isOpened():
-            st.error("❌ Failed to open webcam. Try checking device settings.")
+            st.error("❌ Cannot access webcam.")
         else:
-            st.success("✅ Webcam accessed successfully!")
-
-            # Stream frames
+            st.success("✅ Webcam started.")
             st_frame = st.empty()
-            while True:
-                success, frame = cap.read()
 
-                if not success:
-                    st.error("⚠️ Failed to retrieve frame. Restart webcam.")
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    st.warning("⚠️ Frame capture failed.")
                     break
 
-                frame = cv2.resize(frame, (720, int(720 * (9 / 16))))  # Resize for consistency
-
+                frame = cv2.resize(frame, (720, int(720 * 9 / 16)))
                 try:
-                    result = model.predict(frame, conf=confidence_value)
-                    result_plotted = result[0].plot()
-                    st_frame.image(result_plotted, caption="Live Detection", channels="BGR", use_container_width=True)
+                    results = model.predict(frame, conf=confidence_value)
+                    plotted = results[0].plot()
+                    st_frame.image(plotted, channels="BGR", use_column_width=True)
                 except Exception as e:
-                    st.error(f"❌ Error during detection: {e}")
+                    st.error(f"Live detection error: {e}")
                     break
 
             cap.release()
