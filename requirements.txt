@@ -1,8 +1,9 @@
-streamlit
-ultralytics
-opencv-python-headless>=4.8.1.78
-numpy<2
-Pillow
-json5
-deep_sort_realtime
-pybind11>=2.12
+streamlit>=1.23
+opencv-python-headless>=4.8.1
+ultralytics>=8.3.0
+numpy<2  # Prevent NumPy 2.x compatibility issues
+Pillow>=9.0
+json5>=0.9.6
+deep_sort_realtime>=0.2.0
+torch>=2.0
+torchvision>=0.15
