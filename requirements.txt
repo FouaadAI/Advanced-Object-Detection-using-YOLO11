@@ -6,3 +6,4 @@ numpy
 Pillow
 json5
 deep_sort_realtime
+opencv-python-headless==4.8.1.78
