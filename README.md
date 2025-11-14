@@ -48,7 +48,7 @@ Advanced-Object-Detection-using-YOLO11/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/<your-username>/Advanced-Object-Detection-using-YOLO11.git
+git clone https://github.com/FouaadAI/Advanced-Object-Detection-using-YOLO11.git
 cd Advanced-Object-Detection-using-YOLO11
 ```
 
