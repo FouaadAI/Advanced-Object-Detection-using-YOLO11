@@ -140,6 +140,8 @@ weights/yolo11n.pt
 
 You may use different YOLOv11 variants depending on accuracy/speed requirements.
 
+App_Link : [lets try it](https://fouad-ai-advanced-object-detection-using-yolo11.streamlit.app/)
+
 ---
 
 
